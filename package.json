@@ -36,7 +36,8 @@
       "oneClick": true,
       "perMachine": false,
       "createDesktopShortcut": false,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "artifactName": "Assistente-Vozzu-Setup.exe"
     },
     "files": [
       "dist/**/*",
