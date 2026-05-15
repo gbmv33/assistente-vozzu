@@ -6,6 +6,7 @@ import type { WebSocketServer } from "ws";
 
 const CONFIG_PATH = path.join(app.getPath("userData"), "config.json");
 const WS_PORT = 7337;
+const WSS_PORT = 7338;
 
 interface Config {
   firstRun: boolean;
@@ -38,7 +39,7 @@ function rebuildTrayMenu(): void {
   const menu = Menu.buildFromTemplate([
     { label: "Assistente Vozzu", enabled: false },
     { label: status, enabled: false },
-    { label: `Porta: ${WS_PORT}`, enabled: false },
+    { label: `WS: ${WS_PORT}  |  WSS: ${WSS_PORT}`, enabled: false },
     { type: "separator" },
     { label: "Sair", click: () => { app.quit(); } },
   ]);
@@ -56,11 +57,10 @@ function createTray(): void {
   rebuildTrayMenu();
 
   tray.on("double-click", () => {
-    // sem janela — notifica o status via balloon
     new Notification({
       title: "Assistente Vozzu",
       body: wss
-        ? `Rodando na porta ${WS_PORT} · ${clientCount} painel(is) conectado(s)`
+        ? `WS :${WS_PORT} | WSS :${WSS_PORT} · ${clientCount} painel(is) conectado(s)`
         : "Servidor não está rodando",
       silent: true,
     }).show();
@@ -68,17 +68,18 @@ function createTray(): void {
 }
 
 function startServer(): void {
-  wss = startWsServer({
+  const result = startWsServer({
     port: WS_PORT,
+    portSecure: WSS_PORT,
     onClientChange: (count) => {
       clientCount = count;
       rebuildTrayMenu();
     },
   });
+  wss = result.wss;
 }
 
 app.whenReady().then(() => {
-  // Impede que o app apareça no Dock/Taskbar — apenas bandeja
   app.setAppUserModelId("com.vozzu.assistente");
 
   const config = loadConfig();
@@ -94,6 +95,7 @@ app.whenReady().then(() => {
 
   createTray();
   startServer();
+  rebuildTrayMenu();
 });
 
 app.on("window-all-closed", () => {
