@@ -1,9 +1,8 @@
-name: Build & Release
+name: Build e Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [master]
 
 permissions:
   contents: write
@@ -22,17 +21,36 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Instalar dependências
         run: npm ci
 
-      - name: Compile TypeScript
+      - name: Compilar TypeScript
         run: npx tsc
 
-      - name: Build Windows installer
+      - name: Empacotar instalador Windows
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npx electron-builder --win --x64 --publish never
 
-      - name: Upload release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist-installer/*.exe
-          generate_release_notes: true
+      - name: Publicar release "latest"
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes 2>/dev/null || true
+          git tag -d latest 2>/dev/null || true
+          git push origin :refs/tags/latest 2>/dev/null || true
+          gh release create latest \
+            "dist-installer/Assistente-Vozzu-Setup.exe" \
+            --title "Assistente Vozzu — última versão" \
+            --notes "**Build automático** — commit \`${{ github.sha }}\`
+
+          ## Instalação
+          1. Baixe e execute **Assistente-Vozzu-Setup.exe**
+          2. O assistente inicia automaticamente com o Windows
+          3. Um ícone aparece na bandeja do sistema (canto inferior direito)
+
+          ## HTTPS / domínio próprio
+          Se o painel estiver em HTTPS, acesse **https://127.0.0.1:7338** uma vez para aceitar o certificado local. Depois a impressão funciona normalmente." \
+            --prerelease \
+            --latest
