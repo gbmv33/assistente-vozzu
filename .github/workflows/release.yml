@@ -52,5 +52,4 @@ jobs:
 
           ## HTTPS / domínio próprio
           Se o painel estiver em HTTPS, acesse **https://127.0.0.1:7338** uma vez para aceitar o certificado local. Depois a impressão funciona normalmente." \
-            --prerelease \
             --latest
