@@ -1,20 +1,18 @@
 import { app, Tray, Menu, nativeImage, Notification } from "electron";
 import * as path from "path";
 import * as fs from "fs";
-import { startWsServer } from "./ws-server";
-import type { WebSocketServer } from "ws";
+import * as http from "http";
+import { startHttpServer } from "./ws-server";
 
 const CONFIG_PATH = path.join(app.getPath("userData"), "config.json");
-const WS_PORT = 7337;
-const WSS_PORT = 7338;
+const HTTP_PORT = 7337;
 
 interface Config {
   firstRun: boolean;
 }
 
 let tray: Tray | null = null;
-let wss: WebSocketServer | null = null;
-let clientCount = 0;
+let server: http.Server | null = null;
 
 function loadConfig(): Config {
   try {
@@ -31,15 +29,11 @@ function saveConfig(c: Config): void {
 
 function rebuildTrayMenu(): void {
   if (!tray) return;
-  const running = !!wss;
-  const status = running
-    ? `Online · ${clientCount} painel(is) conectado(s)`
-    : "Offline";
+  const status = server ? `Online · porta ${HTTP_PORT}` : "Offline";
 
   const menu = Menu.buildFromTemplate([
     { label: "Assistente Vozzu", enabled: false },
     { label: status, enabled: false },
-    { label: `WS: ${WS_PORT}  |  WSS: ${WSS_PORT}`, enabled: false },
     { type: "separator" },
     { label: "Sair", click: () => { app.quit(); } },
   ]);
@@ -59,24 +53,12 @@ function createTray(): void {
   tray.on("double-click", () => {
     new Notification({
       title: "Assistente Vozzu",
-      body: wss
-        ? `WS :${WS_PORT} | WSS :${WSS_PORT} · ${clientCount} painel(is) conectado(s)`
+      body: server
+        ? `Rodando na porta ${HTTP_PORT}`
         : "Servidor não está rodando",
       silent: true,
     }).show();
   });
-}
-
-function startServer(): void {
-  const result = startWsServer({
-    port: WS_PORT,
-    portSecure: WSS_PORT,
-    onClientChange: (count) => {
-      clientCount = count;
-      rebuildTrayMenu();
-    },
-  });
-  wss = result.wss;
 }
 
 app.whenReady().then(() => {
@@ -94,7 +76,7 @@ app.whenReady().then(() => {
   }
 
   createTray();
-  startServer();
+  server = startHttpServer(HTTP_PORT);
   rebuildTrayMenu();
 });
 
@@ -104,5 +86,5 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
   tray?.destroy();
-  wss?.close();
+  server?.close();
 });
