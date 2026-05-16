@@ -1,5 +1,5 @@
 import * as http from "http";
-import { execSync } from "child_process";
+import { spawnSync } from "child_process";
 import { printJob } from "./printer";
 
 const CORS_HEADERS: Record<string, string> = {
@@ -9,26 +9,40 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Private-Network": "true",
 };
 
+const PS_OPTS = {
+  encoding: "utf-8" as const,
+  timeout: 8000,
+  windowsHide: true,
+};
+
 function fetchPrintersSync(): string[] {
-  try {
-    let out: string;
-    try {
-      out = execSync("wmic printer get name /format:list", { encoding: "utf-8", timeout: 5000 });
-      return out
-        .split(/\r?\n/)
-        .filter((l) => l.startsWith("Name="))
-        .map((l) => l.replace("Name=", "").trim())
-        .filter(Boolean);
-    } catch {
-      out = execSync(
-        'powershell -NoProfile -Command "Get-Printer | Select-Object -ExpandProperty Name"',
-        { encoding: "utf-8", timeout: 5000 }
-      );
-      return out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    }
-  } catch {
-    return [];
+  // Get-CimInstance não depende do módulo PrintManagement — funciona mesmo
+  // quando o Electron sobe com o Windows sem o PSModulePath completo.
+  // WMIC foi removido do Windows 11 24H2+.
+  const cim = spawnSync(
+    "powershell",
+    ["-NoProfile", "-NonInteractive", "-Command",
+     "Get-CimInstance -ClassName Win32_Printer | Select-Object -ExpandProperty Name"],
+    PS_OPTS
+  );
+  if (cim.status === 0 && cim.stdout) {
+    const names = cim.stdout.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (names.length > 0) return names;
   }
+
+  // Fallback: Get-Printer (requer módulo PrintManagement)
+  const gp = spawnSync(
+    "powershell",
+    ["-NoProfile", "-NonInteractive", "-Command",
+     "Get-Printer | Select-Object -ExpandProperty Name"],
+    PS_OPTS
+  );
+  if (gp.status === 0 && gp.stdout) {
+    const names = gp.stdout.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (names.length > 0) return names;
+  }
+
+  return [];
 }
 
 // Cache populado no startup; refresh a cada 60s em background thread
