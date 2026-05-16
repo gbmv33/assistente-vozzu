@@ -28,14 +28,10 @@ public class WinSpooler {
     [DllImport("winspool.drv", SetLastError=true)]
     public static extern bool EndDocPrinter(IntPtr h);
     [DllImport("winspool.drv", SetLastError=true)]
-    public static extern bool StartPagePrinter(IntPtr h);
-    [DllImport("winspool.drv", SetLastError=true)]
-    public static extern bool EndPagePrinter(IntPtr h);
-    [DllImport("winspool.drv", SetLastError=true)]
     public static extern bool WritePrinter(IntPtr h, byte[] b, int n, ref int w);
+    // DOC_INFO_1 nao tem campo de tamanho — apenas os tres ponteiros
     [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
     public struct DocInfo {
-        public int sz;
         [MarshalAs(UnmanagedType.LPWStr)] public string doc;
         [MarshalAs(UnmanagedType.LPWStr)] public string output;
         [MarshalAs(UnmanagedType.LPWStr)] public string type;
@@ -49,14 +45,11 @@ if (-not [WinSpooler]::OpenPrinter($Printer, [ref]$h, [IntPtr]::Zero)) {
 }
 try {
   $di = New-Object WinSpooler+DocInfo
-  $di.sz = [System.Runtime.InteropServices.Marshal]::SizeOf($di)
   $di.doc = 'Vozzu'
   $di.type = 'RAW'
   [WinSpooler]::StartDocPrinter($h, 1, [ref]$di) | Out-Null
-  [WinSpooler]::StartPagePrinter($h) | Out-Null
   $wr = 0
   [WinSpooler]::WritePrinter($h, $bytes, $bytes.Length, [ref]$wr) | Out-Null
-  [WinSpooler]::EndPagePrinter($h) | Out-Null
   [WinSpooler]::EndDocPrinter($h) | Out-Null
 } finally {
   [WinSpooler]::ClosePrinter($h) | Out-Null
