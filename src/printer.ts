@@ -96,9 +96,11 @@ function sendRaw(printerName: string, data: Buffer): void {
 }
 
 export async function printJob(job: PrintJob, printerName: string): Promise<void> {
+  // interface: tcp evita carregar node-printer (módulo nativo ausente no Electron).
+  // execute() nunca é chamado — usamos getBuffer() + PowerShell para enviar.
   const p = new ThermalPrinter({
     type: types.EPSON,
-    interface: `printer:${printerName}`,
+    interface: "tcp://127.0.0.1:1",
     width: job.paperSize === "58mm" ? 32 : 42,
     characterSet: CharacterSet.PC860_PORTUGUESE,
     removeSpecialCharacters: false,
