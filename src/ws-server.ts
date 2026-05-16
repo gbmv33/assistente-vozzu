@@ -9,7 +9,7 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Private-Network": "true",
 };
 
-function getInstalledPrinters(): string[] {
+function fetchPrintersSync(): string[] {
   try {
     let out: string;
     try {
@@ -31,7 +31,20 @@ function getInstalledPrinters(): string[] {
   }
 }
 
+// Cache populado no startup; refresh a cada 60s em background thread
+let cachedPrinters: string[] = [];
+
+function refreshPrinterCache(): void {
+  setImmediate(() => {
+    cachedPrinters = fetchPrintersSync();
+  });
+}
+
 export function startHttpServer(port: number): http.Server {
+  // Popula cache imediatamente ao iniciar o servidor
+  refreshPrinterCache();
+  setInterval(refreshPrinterCache, 60_000).unref();
+
   const server = http.createServer((req, res) => {
     Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
 
@@ -50,9 +63,8 @@ export function startHttpServer(port: number): http.Server {
     }
 
     if (req.method === "GET" && url === "/printers") {
-      const printers = getInstalledPrinters();
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true, printers }));
+      res.end(JSON.stringify({ ok: true, printers: cachedPrinters }));
       return;
     }
 

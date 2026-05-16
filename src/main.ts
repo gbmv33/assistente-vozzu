@@ -77,7 +77,12 @@ app.whenReady().then(() => {
 
   createTray();
   server = startHttpServer(HTTP_PORT);
-  rebuildTrayMenu();
+  server.once("listening", () => rebuildTrayMenu());
+  server.once("error", (err: NodeJS.ErrnoException) => {
+    console.error("HTTP server error:", err);
+    server = null;
+    rebuildTrayMenu();
+  });
 });
 
 app.on("window-all-closed", () => {
