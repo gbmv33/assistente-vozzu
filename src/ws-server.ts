@@ -2,12 +2,30 @@ import * as http from "http";
 import { spawnSync } from "child_process";
 import { printJob } from "./printer";
 
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Private-Network": "true",
-};
+// Só o painel Vozzu (e localhost em dev) pode falar com o assistente local —
+// senão qualquer site aberto no navegador do lojista poderia imprimir e
+// enumerar impressoras.
+const ALLOWED_ORIGINS = [
+  "https://vozzu.com.br",
+  "https://www.vozzu.com.br",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
+function corsHeadersFor(origin: string | undefined): Record<string, string> {
+  const allowed =
+    !!origin &&
+    (ALLOWED_ORIGINS.includes(origin) ||
+      /^https:\/\/[a-z0-9-]+\.vozzu\.com\.br$/i.test(origin));
+
+  return {
+    "Access-Control-Allow-Origin": allowed ? (origin as string) : "https://vozzu.com.br",
+    "Vary": "Origin",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Private-Network": "true",
+  };
+}
 
 const PS_OPTS = {
   encoding: "utf-8" as const,
@@ -60,7 +78,7 @@ export function startHttpServer(port: number): http.Server {
   setInterval(refreshPrinterCache, 60_000).unref();
 
   const server = http.createServer((req, res) => {
-    Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+    Object.entries(corsHeadersFor(req.headers.origin)).forEach(([k, v]) => res.setHeader(k, v));
 
     if (req.method === "OPTIONS") {
       res.writeHead(204);
@@ -95,8 +113,10 @@ export function startHttpServer(port: number): http.Server {
               vias: number;
             };
             if (!params.printerName) throw new Error("no_printer");
+            const vias = Math.min(Math.max(Number(params.vias) || 1, 1), 5);
+            const paperSize = params.paperSize === "58mm" ? "58mm" : "80mm";
             await printJob(
-              { text: params.text, paperSize: params.paperSize, vias: params.vias },
+              { text: String(params.text ?? ""), paperSize, vias },
               params.printerName
             );
             res.writeHead(200, { "Content-Type": "application/json" });
