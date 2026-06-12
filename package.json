@@ -10,12 +10,10 @@
     "dist": "node scripts/gen-icons.js && tsc && electron-builder --win --x64"
   },
   "dependencies": {
-    "node-thermal-printer": "^4.4.1",
-    "ws": "^8.18.0"
+    "node-thermal-printer": "^4.4.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/ws": "^8.5.13",
     "electron": "^35.1.0",
     "electron-builder": "^26.0.0",
     "png-to-ico": "^3.0.1",
