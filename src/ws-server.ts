@@ -109,14 +109,14 @@ export function startHttpServer(port: number): http.Server {
             const params = JSON.parse(body) as {
               text: string;
               printerName: string;
-              paperSize: "58mm" | "80mm";
+              columns: number;
               vias: number;
             };
             if (!params.printerName) throw new Error("no_printer");
             const vias = Math.min(Math.max(Number(params.vias) || 1, 1), 5);
-            const paperSize = params.paperSize === "58mm" ? "58mm" : "80mm";
+            const columns = Math.min(Math.max(Number(params.columns) || 42, 32), 80);
             await printJob(
-              { text: String(params.text ?? ""), paperSize, vias },
+              { text: String(params.text ?? ""), columns, vias },
               params.printerName
             );
             res.writeHead(200, { "Content-Type": "application/json" });

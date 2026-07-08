@@ -8,7 +8,10 @@ const { printer: ThermalPrinter, types, CharacterSet } = require("node-thermal-p
 
 export interface PrintJob {
   text: string;
-  paperSize: "58mm" | "80mm";
+  // Nº de caracteres por linha que a impressora real comporta — varia por
+  // modelo/fonte, não só pelo tamanho do papel (substituiu paperSize
+  // "58mm"/"80mm", que divergia do valor usado no lado Rails pra 80mm).
+  columns: number;
   vias: number;
 }
 
@@ -99,7 +102,7 @@ export async function printJob(job: PrintJob, printerName: string): Promise<void
   const p = new ThermalPrinter({
     type: types.EPSON,
     interface: "tcp://127.0.0.1:1",
-    width: job.paperSize === "58mm" ? 32 : 42,
+    width: job.columns,
     characterSet: CharacterSet.PC860_PORTUGUESE,
     removeSpecialCharacters: false,
   });
