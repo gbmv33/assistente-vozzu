@@ -24,6 +24,16 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Definir versão da build (incrementa a cada run, pro auto-update comparar)
+        shell: bash
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '1.0.${{ github.run_number }}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
       - name: Compilar TypeScript
         run: npx tsc
 
@@ -42,13 +52,15 @@ jobs:
           git push origin :refs/tags/latest 2>/dev/null || true
           gh release create latest \
             "dist-installer/Assistente-Vozzu-Setup.exe" \
-            --title "Assistente Vozzu — última versão" \
+            "dist-installer/latest.yml" \
+            --title "Assistente Vozzu — última versão (v1.0.${{ github.run_number }})" \
             --notes "**Build automático** — commit \`${{ github.sha }}\`
 
           ## Instalação
           1. Baixe e execute **Assistente-Vozzu-Setup.exe**
           2. O assistente inicia automaticamente com o Windows
           3. Um ícone aparece na bandeja do sistema (canto inferior direito)
+          4. A partir de agora, o assistente avisa sozinho quando sair uma versão nova
 
           ## HTTPS / domínio próprio
           Se o painel estiver em HTTPS, acesse **https://127.0.0.1:7338** uma vez para aceitar o certificado local. Depois a impressão funciona normalmente." \

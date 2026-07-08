@@ -10,6 +10,7 @@
     "dist": "node scripts/gen-icons.js && tsc && electron-builder --win --x64"
   },
   "dependencies": {
+    "electron-updater": "^6.3.9",
     "node-thermal-printer": "^4.4.1"
   },
   "devDependencies": {
@@ -25,6 +26,11 @@
     "productName": "Assistente Vozzu",
     "directories": {
       "output": "dist-installer"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "gbmv33",
+      "repo": "assistente-vozzu"
     },
     "win": {
       "target": "nsis",
