@@ -12,6 +12,11 @@ export interface PrintJob {
   vias: number;
 }
 
+// Uma linha começando com esse caractere é negrito de LINHA INTEIRA (nunca
+// negrito parcial) — mesma convenção usada pelo OrderPrinter (Ruby, repo
+// vozzu) e pelo print_orchestrator.js (caminho Bluetooth/navegador).
+const BOLD_MARK = String.fromCharCode(1);
+
 // Sends raw ESC/POS bytes to a Windows printer via Win32 Print Spooler API.
 // Avoids node-printer native module (requires electron-rebuild to work in Electron).
 const PS_RAW_PRINT = `param([string]$Printer, [string]$DataFile)
@@ -100,7 +105,11 @@ export async function printJob(job: PrintJob, printerName: string): Promise<void
   });
 
   for (const line of job.text.split("\n")) {
-    p.println(line);
+    const isBold = line.startsWith(BOLD_MARK);
+    const content = isBold ? line.slice(BOLD_MARK.length) : line;
+    if (isBold) p.bold(true);
+    p.println(content);
+    if (isBold) p.bold(false);
   }
   p.cut();
 
